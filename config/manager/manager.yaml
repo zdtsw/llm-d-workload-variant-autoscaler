@@ -21,8 +21,7 @@ spec:
     matchLabels:
       control-plane: controller-manager
       app.kubernetes.io/name: workload-variant-autoscaler
-  # to reduce resource usage in OCP, set replica to 1 but keep it 2 in chart
-  replicas: 1
+  # k8s defaults to 1 replica, omit config here, but keep replica 2 in chart
   template:
     metadata:
       annotations:

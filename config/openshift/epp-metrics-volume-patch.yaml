@@ -11,4 +11,3 @@ spec:
         secret:
           secretName: epp-metrics-token
           defaultMode: 420
-          optional: true  # wont fail deployment if secret doest not exist
