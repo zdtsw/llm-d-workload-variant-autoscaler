@@ -7,7 +7,7 @@ CLUSTER_GPU_TYPE ?= nvidia-mix
 CLUSTER_NODES ?= 3
 CLUSTER_GPUS ?= 4
 KUBECONFIG ?= $(HOME)/.kube/config
-K8S_VERSION ?= v1.32.0
+K8S_VERSION ?= v1.32.0 # match OCP 4.19
 
 CONTROLLER_NAMESPACE ?= workload-variant-autoscaler-system
 MONITORING_NAMESPACE ?= openshift-user-workload-monitoring
@@ -44,7 +44,7 @@ endif
 # CONTAINER_TOOL defines the container tool to be used for building images.
 # Be aware that the target commands are only tested with Docker which is
 # scaffolded by default. However, you might want to replace it to use other
-# tools. (i.e. podman)
+# tools. (i.e. docker, podman)
 CONTAINER_TOOL ?= docker
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
@@ -127,9 +127,9 @@ undeploy-wva-emulated-on-kind:
 ## Deploy WVA to OpenShift cluster with specified image.
 .PHONY: deploy-wva-on-openshift
 deploy-wva-on-openshift: manifests kustomize ## Deploy WVA to OpenShift cluster with specified image.
-	@echo "Deploying WVA to OpenShift with image: $(IMG)"
+	@echo "Deploying WVA to OpenShift with image: $(IMG) by default no GW nor Prom stack to be created"
 	@echo "Target namespace: $(or $(NAMESPACE),workload-variant-autoscaler-system)"
-	NAMESPACE=$(or $(NAMESPACE),workload-variant-autoscaler-system) IMG=$(IMG) ENVIRONMENT=openshift DEPLOY_LLM_D=$(DEPLOY_LLM_D) ./deploy/install.sh
+	NAMESPACE=$(or $(NAMESPACE),workload-variant-autoscaler-system) IMG=$(IMG) ENVIRONMENT=openshift INSTALL_GATEWAY_CTRLPLANE=false DEPLOY_PROMETHEUS=false DEPLOY_LLM_D=$(DEPLOY_LLM_D) ./deploy/install.sh
 
 ## Undeploy WVA from OpenShift.
 .PHONY: undeploy-wva-on-openshift
@@ -197,6 +197,7 @@ deploy-e2e-infra: ## Deploy e2e test infrastructure (infra-only: WVA + llm-d, no
 		WVA_IMAGE_REPO=$$IMAGE_REPO \
 		WVA_IMAGE_TAG=$$IMAGE_TAG \
 		WVA_IMAGE_PULL_POLICY=IfNotPresent \
+		CONTAINER_TOOL=$(CONTAINER_TOOL) \
 		./deploy/install.sh; \
 	else \
 		echo "IMG not set - using default image from registry (latest)"; \
@@ -207,6 +208,7 @@ deploy-e2e-infra: ## Deploy e2e test infrastructure (infra-only: WVA + llm-d, no
 		SCALER_BACKEND=$(SCALER_BACKEND) \
 		INSTALL_GATEWAY_CTRLPLANE=true \
 		NAMESPACE_SCOPED=false \
+		CONTAINER_TOOL=$(CONTAINER_TOOL) \
 		./deploy/install.sh; \
 	fi
 

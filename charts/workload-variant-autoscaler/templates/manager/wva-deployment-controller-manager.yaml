@@ -105,10 +105,14 @@ spec:
           mountPath: /etc/wva/config.yaml
           subPath: config.yaml
           readOnly: true
-        {{- if .Values.wva.prometheus.caCert }}
+        {{- if ne .Values.wva.prometheus.tls.caCertPath "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt" }}
         - name: prometheus-ca-cert
-          mountPath: /etc/ssl/certs/prometheus-ca.crt
+          mountPath: {{ .Values.wva.prometheus.tls.caCertPath }}
+          {{- if .Values.wva.prometheus.tls.existingSecret }}
+          subPath: {{ .Values.wva.prometheus.tls.key }}
+          {{- else }}
           subPath: ca.crt
+          {{- end }}
           readOnly: true
         {{- end }}
         - name: epp-metrics-token
@@ -118,10 +122,22 @@ spec:
       - name: wva-config
         configMap:
           name: {{ include "workload-variant-autoscaler.fullname" . }}-variantautoscaling-config
-      {{- if .Values.wva.prometheus.caCert }}
+      {{- if ne .Values.wva.prometheus.tls.caCertPath "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt" }}
       - name: prometheus-ca-cert
+        {{- if .Values.wva.prometheus.tls.existingSecret }}
+        secret:
+          secretName: {{ .Values.wva.prometheus.tls.existingSecret }}
+          {{- if .Values.wva.prometheus.tls.key }}
+          items:
+          - key: {{ .Values.wva.prometheus.tls.key }}
+            path: {{ .Values.wva.prometheus.tls.key }}
+          {{- end }}
+          optional: false
+        {{- else }}
         configMap:
           name: {{ include "workload-variant-autoscaler.fullname" . }}-prometheus-ca
+          optional: true
+        {{- end }}
       {{- end }}
       - name: epp-metrics-token
         secret:

@@ -398,7 +398,8 @@ jobs:
       HPA_STABILIZATION_SECONDS: ${{ github.event.inputs.hpa_stabilization_seconds || '240' }}
       SKIP_CLEANUP: ${{ github.event.inputs.skip_cleanup || 'false' }}
       # Use main branch of llm-d/llm-d for inferencepool chart v1.2.1 (GA API support)
-      LLM_D_RELEASE: main
+      LLM_D_EPP_RELEASE: main
+      LLM_D_SIM_RELEASE: main
       # PR-specific namespaces for isolation between concurrent PR tests
       # Primary llm-d namespace (Model A1 + A2)
       LLMD_NAMESPACE: llm-d-inference-scheduler-pr-${{ needs.gate.outputs.pr_number || github.run_id }}

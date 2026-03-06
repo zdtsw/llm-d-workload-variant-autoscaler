@@ -18,17 +18,24 @@ PROMETHEUS_BASE_URL="https://$PROMETHEUS_SVC_NAME.openshift-monitoring.svc.clust
 PROMETHEUS_PORT="9091"
 PROMETHEUS_URL=${PROMETHEUS_URL:-"$PROMETHEUS_BASE_URL:$PROMETHEUS_PORT"}
 MONITORING_NAMESPACE="openshift-user-workload-monitoring"
-PROMETHEUS_SECRET_NAME="thanos-querier-tls"
 PROMETHEUS_SECRET_NS="openshift-monitoring"
+# Prometheus TLS - OpenShift  automatically injects service CA into projected volumes
+# Certificate available at: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+# No manual ConfigMap creation needed
+PROM_TLS_CA_CERT_PATH="/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
 DEPLOY_PROMETHEUS=false  # OpenShift uses built-in monitoring stack
 INSTALL_GATEWAY_CTRLPLANE=false  # OpenShift uses its own Gateway control plane stack
 
 # OpenShift-specific prerequisites
-REQUIRED_TOOLS=("oc")
+# Note: kubectl commands are used throughout this script, but oc need to check "whoami"
+REQUIRED_TOOLS=("oc" "kubectl")
 
 # TLS verification enabled by default on OpenShift
 SKIP_TLS_VERIFY=false
 VALUES_FILE="${WVA_PROJECT}/charts/workload-variant-autoscaler/values.yaml"
+
+# LWS config
+LWS_CHART_VERSION=0.8.0
 
 #### REQUIRED FUNCTION used by deploy/install.sh ####
 check_specific_prerequisites() {
@@ -123,10 +130,9 @@ deploy_wva_prerequisites() {
     log_info "Deploying Workload-Variant-Autoscaler..."
     extract_openshift_prometheus_ca
 
-    CHART_VERSION=0.8.0
-    log_info "Installing LeaderWorkerSet version $CHART_VERSION into lws-system namespace"
+    log_info "Installing LeaderWorkerSet version $LWS_CHART_VERSION into lws-system namespace"
     helm upgrade -i lws oci://registry.k8s.io/lws/charts/lws \
-        --version=$CHART_VERSION \
+        --version=$LWS_CHART_VERSION \
         --namespace lws-system \
         --create-namespace \
         --wait --timeout 300s

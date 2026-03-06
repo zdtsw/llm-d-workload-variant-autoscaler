@@ -43,11 +43,23 @@ VALUES_FILE=${VALUES_FILE:-"$WVA_PROJECT/charts/workload-variant-autoscaler/valu
 # Controller instance identifier for multi-controller isolation (optional)
 # When set, adds controller_instance label to metrics and HPA selectors
 CONTROLLER_INSTANCE=${CONTROLLER_INSTANCE:-""}
+# InferencePool API group
+# inference.networking.k8s.io for v1, should be new default
+# inference.networking.x-k8s.io for v1alpha2
+POOL_GROUP=${POOL_GROUP:-"inference.networking.k8s.io"}
+if [ "$POOL_GROUP" = "inference.networking.k8s.io" ]; then
+    POOL_VERSION="v1"
+elif [ "$POOL_GROUP" = "inference.networking.x-k8s.io" ]; then
+    POOL_VERSION="v1alpha2"
+else
+    log_error "Unknown POOL_GROUP: $POOL_GROUP (expected inference.networking.k8s.io or inference.networking.x-k8s.io)"
+    exit 1
+fi
 
 # llm-d Configuration
 LLM_D_OWNER=${LLM_D_OWNER:-"llm-d"}
 LLM_D_PROJECT=${LLM_D_PROJECT:-"llm-d"}
-LLM_D_RELEASE=${LLM_D_RELEASE:-"v0.3.0"}
+LLM_D_RELEASE=${LLM_D_RELEASE:-"v0.6.0"}  # llm-d repo branch/tag to clone
 LLM_D_MODELSERVICE_NAME=${LLM_D_MODELSERVICE_NAME:-"ms-$WELL_LIT_PATH_NAME-llm-d-modelservice"}
 LLM_D_EPP_NAME=${LLM_D_EPP_NAME:-"gaie-$WELL_LIT_PATH_NAME-epp"}
 CLIENT_PREREQ_DIR=${CLIENT_PREREQ_DIR:-"$WVA_PROJECT/$LLM_D_PROJECT/guides/prereq/client-setup"}
@@ -57,8 +69,12 @@ LLM_D_MODELSERVICE_VALUES=${LLM_D_MODELSERVICE_VALUES:-"$EXAMPLE_DIR/ms-$WELL_LI
 ITL_AVERAGE_LATENCY_MS=${ITL_AVERAGE_LATENCY_MS:-20}
 TTFT_AVERAGE_LATENCY_MS=${TTFT_AVERAGE_LATENCY_MS:-200}
 ENABLE_SCALE_TO_ZERO=${ENABLE_SCALE_TO_ZERO:-true}
-# llm-d-inference scheduler with image with flowcontrol support
-LLM_D_INFERENCE_SCHEDULER_IMG=${LLM_D_INFERENCE_SCHEDULER_IMG:-"ghcr.io/llm-d/llm-d-inference-scheduler:v0.7.0"}
+# Image overrides: may differ from LLM_D_RELEASE; post-deploy patch in infra_llmd.sh
+# replaces the helmfile-deployed image (e.g. to enable flowControl for scale-from-zero).
+LLM_D_EPP_RELEASE=${LLM_D_EPP_RELEASE:-"v0.7.1"}
+LLM_D_SIM_RELEASE=${LLM_D_SIM_RELEASE:-"v0.8.2"}
+LLM_D_INFERENCE_SCHEDULER_IMG=${LLM_D_INFERENCE_SCHEDULER_IMG:-"ghcr.io/llm-d/llm-d-inference-scheduler:$LLM_D_EPP_RELEASE"}
+LLM_D_INFERENCE_SIM_IMG=${LLM_D_INFERENCE_SIM_IMG:-"ghcr.io/llm-d/llm-d-inference-sim:$LLM_D_SIM_RELEASE"}
 
 # Gateway Configuration
 GATEWAY_PROVIDER=${GATEWAY_PROVIDER:-"istio"} # Options: kgateway, istio

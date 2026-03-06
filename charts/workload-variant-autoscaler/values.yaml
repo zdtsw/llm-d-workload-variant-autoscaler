@@ -37,11 +37,16 @@ wva:
     monitoringNamespace: openshift-user-workload-monitoring
     serviceAccountName: "kube-prometheus-stack-prometheus"
     baseURL: "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091"
-    # Development security configuration (relaxed for easier development)
+    # TLS security configuration
     tls:
       insecureSkipVerify: true   # Development: true, Production: false
-      # caCertPath: "/etc/ssl/certs/prometheus-ca.crt"  # Only used when caCert is provided
-    # caCert: |  # Uncomment and provide your CA certificate
+      # On OpenShift, service CA is auto-injected at this path
+      caCertPath: "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
+      # Mount existing Secret for CA certificate (recommended)
+      # This eliminates the need for --set-file and certificate extraction
+      existingSecret: ""      # Name of existing Secret (e.g., "prometheus-web-tls" for kind or k8s)
+      key: "tls.crt"          # Name of the key in the Secret's data map containing the CA certificate (required when existingSecret is set)
+    # caCert: |  # DEPRECATED: Use above existingSecret instead
     #   -----BEGIN CERTIFICATE-----
     #   YOUR_CA_CERTIFICATE_HERE
     #   -----END CERTIFICATE-----

@@ -27,8 +27,13 @@ wva:
     # Development security configuration (relaxed for easier development)
     tls:
       insecureSkipVerify: true   # Development: true, Production: false
-      # caCertPath: "/etc/ssl/certs/prometheus-ca.crt"  # Only used when caCert is provided
-    # caCert: |  # Uncomment and provide your CA certificate
+      # On OpenShift, service CA is auto-injected at this path
+      caCertPath: "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
+      # Mount existing Secret for CA certificate (recommended)
+      # This eliminates the need for --set-file and certificate extraction
+      existingSecret: ""      # Name of existing Secret (e.g., "prometheus-web-tls")
+      key: "tls.crt"          # Name of the key in the Secret's data map containing the CA certificate (required when existingSecret is set)
+    # caCert: |  # DEPRECATED: Use above existingSecret instead
     #   -----BEGIN CERTIFICATE-----
     #   YOUR_CA_CERTIFICATE_HERE
     #   -----END CERTIFICATE-----

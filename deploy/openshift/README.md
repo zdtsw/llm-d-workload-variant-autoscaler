@@ -96,7 +96,7 @@ For a complete list of environment variables and configuration options, see the 
 export HF_TOKEN="hf_xxxxx"                  # Required: HuggingFace token
 export MODEL_ID="unsloth/Meta-Llama-3.1-8B" # Model to deploy
 export ACCELERATOR_TYPE="H100"              # GPU type (auto-detected)
-export GATEWAY_PROVIDER="istio"             # Gateway: istio or kgateway
+export GATEWAY_PROVIDER="istio"             # Gateway provider (OpenShift uses Istio/Service Mesh)
 
 # Performance tuning (optional)
 export VLLM_MAX_NUM_SEQS=64                 # vLLM max concurrent sequences (batch size)
@@ -232,7 +232,7 @@ Displays:
 
 - **Namespace**: `llm-d-inference-scheduler` (default)
 - **Components**:
-  - Gateway (kgateway)
+  - Gateway (Istio - OpenShift Service Mesh)
   - Inference Scheduler (GAIE)
   - vLLM deployment with model
   - Service for vLLM
@@ -330,6 +330,31 @@ kubectl logs -n llm-d-inference-scheduler deployment/ms-inference-scheduling-llm
 - Model download timeout
 
 - Inappropriate SLOs for the deployed model and GPU types: update the `SLO_TPOT` and `SLO_TTFT` variables with appropriate SLOs given the model and employed GPU type
+
+### Service CA ConfigMap Creation Failed
+
+```bash
+[ERROR] ConfigMap creation failed - verify namespace permissions and OpenShift Service CA operator is running
+```
+
+**Solution**: Verify the Service CA operator is working:
+
+```bash
+# Check Service CA operator status
+oc get pods -n openshift-service-ca-operator
+
+# Verify namespace exists
+oc get namespace workload-variant-autoscaler-system
+
+# Check for RBAC issues
+oc auth can-i create configmaps -n workload-variant-autoscaler-system
+```
+
+If the operator is running but ConfigMap creation still fails, manually verify the service-ca.crt annotation:
+
+```bash
+oc get configmap openshift-service-ca.crt -n workload-variant-autoscaler-system -o yaml
+```
 
 ## Post-Deployment
 

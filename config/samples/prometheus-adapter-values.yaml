@@ -22,8 +22,11 @@ tls:
 
 extraVolumes:
   - name: prometheus-ca
-    configMap:
-      name: prometheus-ca
+    secret:
+      secretName: prometheus-web-tls  # Secret containing Prom TLS cert
+      items:
+      - key: tls.crt                   # Extract the cert from the Secret
+        path: ca.crt                   # Mount as ca.crt
 
 extraVolumeMounts:
   - name: prometheus-ca

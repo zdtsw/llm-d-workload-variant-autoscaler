@@ -154,9 +154,9 @@ func GetPoolGKNN(poolGroup string) (common.GKNN, error) {
 		poolNamespace = "default"
 	)
 
-	// Default to v1alpha2 group if empty
+	// Default to v1 (since llm-d already by default use v1 than v1alpha2) if empty
 	if poolGroup == "" {
-		poolGroup = PoolGroupV1Alpha2
+		poolGroup = PoolGroupV1
 	}
 
 	// Validate poolGroup against valid values

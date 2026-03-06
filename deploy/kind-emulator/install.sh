@@ -39,6 +39,9 @@ WVA_LOG_LEVEL="debug" # WVA log level set to debug for emulated environments
 # Initial WVA pool group; install.sh auto-detects the actual InferencePool API group after llm-d deploy and upgrades WVA (scale-from-zero).
 POOL_GROUP=${POOL_GROUP:-"inference.networking.k8s.io"}
 
+# Container tool (docker or podman can pass from Makefile)
+CONTAINER_TOOL=${CONTAINER_TOOL:-docker}
+
 # llm-d Configuration
 LLM_D_INFERENCE_SIM_IMG_REPO=${LLM_D_INFERENCE_SIM_IMG_REPO:-"ghcr.io/llm-d/llm-d-inference-sim"}
 LLM_D_INFERENCE_SIM_IMG_TAG=${LLM_D_INFERENCE_SIM_IMG_TAG:-"latest"}
@@ -63,6 +66,8 @@ PROMETHEUS_BASE_URL="https://$PROMETHEUS_SVC_NAME.$MONITORING_NAMESPACE.svc.clus
 PROMETHEUS_PORT="9090"
 PROMETHEUS_URL="$PROMETHEUS_BASE_URL:$PROMETHEUS_PORT"
 PROMETHEUS_SECRET_NAME="prometheus-web-tls"
+# Prometheus TLS - mount existing secret directly (no extraction needed)
+PROM_TLS_CA_CERT_PATH="/etc/ssl/certs/prometheus-ca.crt" # need a different path than OCP default value
 
 # KIND cluster configuration
 CLUSTER_NAME=${CLUSTER_NAME:-"kind-wva-gpu-cluster"}
@@ -173,14 +178,14 @@ load_image() {
         log_info "Using local image only (WVA_IMAGE_PULL_POLICY=IfNotPresent)"
         
         # Check if the image exists locally
-        if ! docker image inspect "$WVA_IMAGE_REPO:$WVA_IMAGE_TAG" >/dev/null 2>&1; then
-            log_error "Image '$WVA_IMAGE_REPO:$WVA_IMAGE_TAG' not found locally - Please build the image first (e.g., 'make docker-build IMG=$WVA_IMAGE_REPO:$WVA_IMAGE_TAG')"
+        if ! $CONTAINER_TOOL image inspect "$WVA_IMAGE_REPO:$WVA_IMAGE_TAG" >/dev/null 2>&1; then
+            log_error "Image '$WVA_IMAGE_REPO:$WVA_IMAGE_TAG' not found locally - Please build the image first (e.g., 'make $CONTAINER_TOOL-build IMG=$WVA_IMAGE_REPO:$WVA_IMAGE_TAG')"
         else
             log_success "Found local image '$WVA_IMAGE_REPO:$WVA_IMAGE_TAG'"
         fi
     else
         # Pull a single-platform image so kind load does not hit "content digest not found"
-        # (multi-platform manifests can reference blobs that are not in the docker save stream).
+        # (multi-platform manifests can reference blobs that are not in the $CONTAINER_TOOL save stream).
         local platform="${KIND_IMAGE_PLATFORM:-}"
         if [ -z "$platform" ]; then
             case "$(uname -m)" in
@@ -189,10 +194,10 @@ load_image() {
             esac
         fi
         log_info "Pulling single-platform image for KIND (platform=$platform) to avoid load errors..."
-        if ! docker pull --platform "$platform" "$WVA_IMAGE_REPO:$WVA_IMAGE_TAG"; then
+        if ! $CONTAINER_TOOL pull --platform "$platform" "$WVA_IMAGE_REPO:$WVA_IMAGE_TAG"; then
             log_warning "Failed to pull image '$WVA_IMAGE_REPO:$WVA_IMAGE_TAG' (platform=$platform)"
             log_info "Attempting to use existing local image..."
-            if ! docker image inspect "$WVA_IMAGE_REPO:$WVA_IMAGE_TAG" >/dev/null 2>&1; then
+            if ! $CONTAINER_TOOL image inspect "$WVA_IMAGE_REPO:$WVA_IMAGE_TAG" >/dev/null 2>&1; then
                 log_error "Image '$WVA_IMAGE_REPO:$WVA_IMAGE_TAG' not found locally - Please build or pull the image"
                 exit 1
             fi
@@ -202,8 +207,18 @@ load_image() {
     fi
     
     # Load the image into the KIND cluster
-    kind load docker-image "$WVA_IMAGE_REPO:$WVA_IMAGE_TAG" --name "$CLUSTER_NAME"
-    log_success "Image '$WVA_IMAGE_REPO:$WVA_IMAGE_TAG' loaded into KIND cluster '$CLUSTER_NAME'"
+    if [ "$CONTAINER_TOOL" = "podman" ]; then
+        # Podman requires a different approach - save to tar and load archive
+        log_info "Using Podman - saving image to tar archive for Kind loading..."
+        local tmp_tar="/tmp/wva-image-$(date +%s).tar"
+        $CONTAINER_TOOL save -o "$tmp_tar" "$WVA_IMAGE_REPO:$WVA_IMAGE_TAG"
+        kind load image-archive "$tmp_tar" --name "$CLUSTER_NAME"
+        rm -f "$tmp_tar"
+        log_success "Image '$WVA_IMAGE_REPO:$WVA_IMAGE_TAG' loaded into KIND cluster '$CLUSTER_NAME' (via archive)"
+    else
+        kind load docker-image "$WVA_IMAGE_REPO:$WVA_IMAGE_TAG" --name "$CLUSTER_NAME"
+        log_success "Image '$WVA_IMAGE_REPO:$WVA_IMAGE_TAG' loaded into KIND cluster '$CLUSTER_NAME'"
+    fi
 }
 
 KUBE_LIKE_VALUES_DEV_IF_PRESENT=true
