@@ -63,7 +63,6 @@ func (r *ConfigMapReconciler) BootstrapInitialConfigMaps(ctx context.Context) er
 							continue // Skip excluded namespaces. Only for all-namespaces mode.
 						}
 					}
-					
 				}
 				if ns.Labels != nil {
 					if value, ok := ns.Labels[constants.NamespaceConfigEnabledLabelKey]; ok {

@@ -1,0 +1,14 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      volumes:
+      - name: epp-metrics-token
+        secret:
+          secretName: epp-metrics-token
+          defaultMode: 420
+          optional: true  # wont fail deployment if secret doest not exist
