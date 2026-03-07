@@ -866,7 +866,11 @@ deploy_llm_d_infrastructure() {
     # Update model ID if different from the guide's actual default
     if [ "$MODEL_ID" != "$ACTUAL_DEFAULT_MODEL" ] ; then
         log_info "Updating deployment to use model: $MODEL_ID (replacing guide default: $ACTUAL_DEFAULT_MODEL)"
-        yq eval "(.. | select(. == \"$ACTUAL_DEFAULT_MODEL\")) = \"$MODEL_ID\" | (.. | select(. == \"hf://$ACTUAL_DEFAULT_MODEL\")) = \"hf://$MODEL_ID\"" -i "$LLM_D_MODELSERVICE_VALUES"
+        # Sanitize model name for k8s label (if MODEL_ID is unsloth/Meta-Llama-3.1-8B, label uses unsloth-Meta-Llama-3.1-8B)
+        MODEL_ID_SANITIZED=$(echo "$MODEL_ID" | tr '/' '-')
+        yq eval ".modelArtifacts.name = \"$MODEL_ID\" | \
+                 .modelArtifacts.uri = \"hf://$MODEL_ID\" | \
+                 .modelArtifacts.labels.\"llm-d.ai/model\" = \"$MODEL_ID_SANITIZED\"" -i "$LLM_D_MODELSERVICE_VALUES"
 
         # Increase model-storage volume size
         log_info "Increasing model-storage volume size for model: $MODEL_ID"
