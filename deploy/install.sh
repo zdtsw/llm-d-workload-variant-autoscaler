@@ -47,7 +47,7 @@ CONTROLLER_INSTANCE=${CONTROLLER_INSTANCE:-""}
 # llm-d Configuration
 LLM_D_OWNER=${LLM_D_OWNER:-"llm-d"}
 LLM_D_PROJECT=${LLM_D_PROJECT:-"llm-d"}
-LLM_D_RELEASE=${LLM_D_RELEASE:-"v0.3.0"}
+LLM_D_RELEASE=${LLM_D_RELEASE:-"v0.5.1"}
 LLM_D_MODELSERVICE_NAME=${LLM_D_MODELSERVICE_NAME:-"ms-$WELL_LIT_PATH_NAME-llm-d-modelservice"}
 LLM_D_EPP_NAME=${LLM_D_EPP_NAME:-"gaie-$WELL_LIT_PATH_NAME-epp"}
 CLIENT_PREREQ_DIR=${CLIENT_PREREQ_DIR:-"$WVA_PROJECT/$LLM_D_PROJECT/guides/prereq/client-setup"}
@@ -57,9 +57,8 @@ LLM_D_MODELSERVICE_VALUES=${LLM_D_MODELSERVICE_VALUES:-"$EXAMPLE_DIR/ms-$WELL_LI
 ITL_AVERAGE_LATENCY_MS=${ITL_AVERAGE_LATENCY_MS:-20}
 TTFT_AVERAGE_LATENCY_MS=${TTFT_AVERAGE_LATENCY_MS:-200}
 ENABLE_SCALE_TO_ZERO=${ENABLE_SCALE_TO_ZERO:-true}
-# llm-d-inference scheduler with image with flowcontrol support
-# TODO: update once the llm-d-inference-scheduler v0.5.0 is released
-LLM_D_INFERENCE_SCHEDULER_IMG=${LLM_D_INFERENCE_SCHEDULER_IMG:-"ghcr.io/llm-d/llm-d-inference-scheduler:v0.5.0-rc.1"}
+LLM_D_INFERENCE_SCHEDULER_IMG=${LLM_D_INFERENCE_SCHEDULER_IMG:-"ghcr.io/llm-d/llm-d-inference-scheduler:$LLM_D_RELEASE"}
+LLM_D_INFERENCE_SIM_IMG=${LLM_D_INFERENCE_SIM_IMG:-"ghcr.io/llm-d/llm-d-inference-sim:$LLM_D_RELEASE"}
 
 # Gateway Configuration
 GATEWAY_PROVIDER=${GATEWAY_PROVIDER:-"istio"} # Options: kgateway, istio
@@ -615,7 +614,7 @@ spec:
       serviceAccountName: gaie-sim-sa
       containers:
       - name: epp
-        image: ghcr.io/llm-d/llm-d-inference-scheduler:v0.3.2
+        image: $LLM_D_INFERENCE_SCHEDULER_IMG
         imagePullPolicy: Always
         args:
         - --poolName=$POOL_NAME_2
@@ -686,7 +685,7 @@ spec:
     spec:
       containers:
       - name: vllm
-        image: ghcr.io/llm-d/llm-d-inference-sim:v0.5.1
+        image: $LLM_D_INFERENCE_SIM_IMG
         imagePullPolicy: Always
         args:
         - --model=$MODEL_ID_2
@@ -786,12 +785,23 @@ EOF
 deploy_llm_d_infrastructure() {
     log_info "Deploying llm-d infrastructure..."
 
-     # Clone llm-d repo if not exists
+    # Clone llm-d repo if not exists or if has older version locally
+    if [ -d "$LLM_D_PROJECT/.git" ]; then
+        CURRENT_TAG=$(cd "$LLM_D_PROJECT" && git describe --tags --exact-match 2>/dev/null || echo "unknown")
+        if [ "$CURRENT_TAG" != "$LLM_D_RELEASE" ]; then
+            log_warning "$LLM_D_PROJECT exists but has version '$CURRENT_TAG' (expected: $LLM_D_RELEASE)"
+            rm -rf "$LLM_D_PROJECT"
+        else
+            log_info "$LLM_D_PROJECT directory already exists with correct version ($LLM_D_RELEASE)"
+        fi
+    elif [ -d "$LLM_D_PROJECT" ]; then
+        log_warning "$LLM_D_PROJECT exists but is not a git repository - removing it"
+        rm -rf "$LLM_D_PROJECT"
+    fi
+
     if [ ! -d "$LLM_D_PROJECT" ]; then
         log_info "Cloning $LLM_D_PROJECT repository (release: $LLM_D_RELEASE)"
         git clone -b $LLM_D_RELEASE -- https://github.com/$LLM_D_OWNER/$LLM_D_PROJECT.git $LLM_D_PROJECT &> /dev/null
-    else
-        log_warning "$LLM_D_PROJECT directory already exists, skipping clone"
     fi
 
     # Check for HF_TOKEN (use dummy for emulated deployments)
@@ -838,7 +848,7 @@ deploy_llm_d_infrastructure() {
     # Install Gateway control plane if enabled
     if [[ "$INSTALL_GATEWAY_CTRLPLANE" == "true" ]]; then
         log_info "Installing Gateway control plane ($GATEWAY_PROVIDER)"
-        helmfile apply -f "$GATEWAY_PREREQ_DIR/$GATEWAY_PROVIDER.helmfile.yaml"
+        helmfile apply -f "$GATEWAY_PREREQ_DIR/$GATEWAY_PROVIDER.helmfile.yaml" --suppress-diff
     else
         log_info "Skipping Gateway control plane installation (INSTALL_GATEWAY_CTRLPLANE=false)"
     fi
@@ -929,7 +939,7 @@ deploy_llm_d_infrastructure() {
       helmfile_selector="--selector kind!=autoscaling"
       log_info "Skipping WVA in helmfile (will be deployed separately from local chart)"
     fi
-    helmfile apply -e $GATEWAY_PROVIDER -n ${LLMD_NS} $helmfile_selector
+    helmfile apply -e $GATEWAY_PROVIDER -n ${LLMD_NS} $helmfile_selector --suppress-diff
 
     # Post-deploy: align the WVA vllm-service selector and ServiceMonitor to match
     # the actual pod labels. The llm-d-modelservice chart sets pod labels from

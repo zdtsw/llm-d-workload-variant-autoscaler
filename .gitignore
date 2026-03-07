@@ -30,8 +30,6 @@ gpu.cluster
 # llm-d and llm-d-infra directories
 llm-d/
 llm-d-infra/
-llmd/
-llmd-infra/
 
 *.tgz
 actionlint

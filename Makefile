@@ -7,7 +7,7 @@ CLUSTER_GPU_TYPE ?= nvidia-mix
 CLUSTER_NODES ?= 3
 CLUSTER_GPUS ?= 4
 KUBECONFIG ?= $(HOME)/.kube/config
-K8S_VERSION ?= v1.32.0
+K8S_VERSION ?= v1.32.0 # match OCP 4.19
 
 CONTROLLER_NAMESPACE ?= workload-variant-autoscaler-system
 MONITORING_NAMESPACE ?= openshift-user-workload-monitoring
@@ -195,6 +195,7 @@ deploy-e2e-infra: ## Deploy e2e test infrastructure (infra-only: WVA + llm-d, no
 		WVA_IMAGE_REPO=$$IMAGE_REPO \
 		WVA_IMAGE_TAG=$$IMAGE_TAG \
 		WVA_IMAGE_PULL_POLICY=IfNotPresent \
+		CONTAINER_TOOL=$(CONTAINER_TOOL) \
 		./deploy/install.sh; \
 	else \
 		echo "IMG not set - using default image from registry (latest)"; \
@@ -205,6 +206,7 @@ deploy-e2e-infra: ## Deploy e2e test infrastructure (infra-only: WVA + llm-d, no
 		SCALER_BACKEND=$(SCALER_BACKEND) \
 		INSTALL_GATEWAY_CTRLPLANE=true \
 		NAMESPACE_SCOPED=false \
+		CONTAINER_TOOL=$(CONTAINER_TOOL) \
 		./deploy/install.sh; \
 	fi
 

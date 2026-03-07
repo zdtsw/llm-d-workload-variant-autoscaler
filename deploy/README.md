@@ -32,6 +32,7 @@ All deployment methods require:
 - **kubectl** (v1.24+) - Kubernetes CLI
 - **helm** (v3.8+) - Package manager for Kubernetes
 - **git** - Git CLI
+- **docker** or **podman** - Container tool for building and loading images
 
 Optional but recommended:
 
@@ -41,6 +42,8 @@ Platform-specific requirements:
 
 - **OpenShift**: `oc` CLI (v4.12+)
 - **Kind**: `kind` CLI for local testing
+
+**Container Tool Support**: The deployment scripts support both Docker and Podman. Set `CONTAINER_TOOL=podman` to use Podman, or leave unset to use the default (`docker`).
 
 ### Cluster Requirements
 
@@ -266,6 +269,22 @@ kubectl get hpa --all-namespaces | grep -v kube-system  # Should be empty (excep
 - ❌ VariantAutoscaling CRs (tests create these)
 - ❌ HPA resources (tests create these)
 - ❌ Model services (tests create these)
+```
+
+##### Example 8: Using specific llm-d release and Podman
+
+Deploy with a specific llm-d release version and use Podman instead of Docker:
+
+```bash
+export HF_TOKEN="hf_xxxxx"
+export LLM_D_RELEASE="v0.5.0"      # Pin to specific llm-d version
+export CONTAINER_TOOL=podman       # Use Podman instead of Docker
+make deploy-wva-emulated-on-kind
+
+# The LLM_D_RELEASE variable automatically sets:
+# - LLM_D_INFERENCE_SCHEDULER_IMG=ghcr.io/llm-d/llm-d-inference-scheduler:v0.5.0
+# - LLM_D_INFERENCE_SIM_IMG=ghcr.io/llm-d/llm-d-inference-sim:v0.5.0
+# - llm-d repository clone version
 ```
 
 ### Method 2: Helm Chart
@@ -620,6 +639,12 @@ Each guide includes platform-specific examples, troubleshooting, and quick start
 | `WVA_IMAGE_REPO` | WVA image repository | `ghcr.io/llm-d/llm-d-workload-variant-autoscaler` |
 | `WVA_IMAGE_TAG` | WVA image tag | `latest` |
 | `WVA_IMAGE_PULL_POLICY` | Image pull policy | `Always` |
+| `LLM_D_RELEASE` | llm-d release version (controls all llm-d images) | `v0.5.1` |
+| `LLM_D_INFERENCE_SCHEDULER_IMG` | Override llm-d inference scheduler image | `ghcr.io/llm-d/llm-d-inference-scheduler:$LLM_D_RELEASE` |
+| `LLM_D_INFERENCE_SIM_IMG` | Override llm-d inference simulator image | `ghcr.io/llm-d/llm-d-inference-sim:$LLM_D_RELEASE` |
+| `CONTAINER_TOOL` | Container tool to use (docker or podman) | `docker` |
+
+**Centralized llm-d Version Management**: Setting `LLM_D_RELEASE` automatically configures all llm-d component images to use the same release version. This ensures version consistency across the llm-d inference scheduler and simulator. Individual image variables can override this if needed.
 
 #### Namespace Configuration
 
@@ -680,7 +705,6 @@ HPA_STABILIZATION_SECONDS=30 ./deploy/install.sh
 | `WVA_LOG_LEVEL` | WVA logging level | `info` |
 | `VLLM_SVC_ENABLED` | Enable vLLM Service | `true` |
 | `VLLM_SVC_NODEPORT` | vLLM NodePort | `30000` |
-| `LLM_D_RELEASE` | llm-d version | `v0.3.0` |
 | `VLLM_MAX_NUM_SEQS` | vLLM max concurrent sequences per replica | (unset - uses vLLM default) |
 
 **vLLM Performance Tuning:**
