@@ -785,11 +785,12 @@ EOF
 deploy_llm_d_infrastructure() {
     log_info "Deploying llm-d infrastructure..."
 
-    # Clone llm-d repo if not exists or if has older version locally
+    # Clone llm-d repo if not exists, or re-clone if version mismatch detected
     if [ -d "$LLM_D_PROJECT/.git" ]; then
-        CURRENT_TAG=$(cd "$LLM_D_PROJECT" && git describe --tags --exact-match 2>/dev/null || echo "unknown")
-        if [ "$CURRENT_TAG" != "$LLM_D_RELEASE" ]; then
-            log_warning "$LLM_D_PROJECT exists but has version '$CURRENT_TAG' (expected: $LLM_D_RELEASE)"
+        # Check current version (try tag first, then branch)
+        CURRENT_VERSION=$(cd "$LLM_D_PROJECT" && git describe --tags --exact-match 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+        if [ "$CURRENT_VERSION" != "$LLM_D_RELEASE" ]; then
+            log_warning "$LLM_D_PROJECT exists but has version '$CURRENT_VERSION' (expected: $LLM_D_RELEASE)"
             rm -rf "$LLM_D_PROJECT"
         else
             log_info "$LLM_D_PROJECT directory already exists with correct version ($LLM_D_RELEASE)"
