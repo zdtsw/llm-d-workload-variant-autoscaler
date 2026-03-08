@@ -87,11 +87,11 @@ func buildModelServiceDeployment(namespace, name, poolName, modelID string, useS
 	}
 	args := buildModelServerArgs(modelID, useSimulator, maxNumSeqs)
 	labels := map[string]string{
-		"app":                       appLabel,
-		"llm-d.ai/inferenceServing": "true",
-		"llm-d.ai/model":            "ms-sim-llm-d-modelservice",
-		"llm-d.ai/model-pool":       poolName,
-		"test-resource":             "true",
+		"app":                         appLabel,
+		"llm-d.ai/inference-serving": "true",
+		"llm-d.ai/model":              "ms-sim-llm-d-modelservice",
+		"llm-d.ai/model-pool":         poolName,
+		"test-resource":               "true",
 	}
 
 	envVars := []corev1.EnvVar{
@@ -136,7 +136,7 @@ func buildModelServiceDeployment(namespace, name, poolName, modelID string, useS
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":                       appLabel,
-					"llm-d.ai/inferenceServing": "true",
+					"llm-d.ai/inference-serving": "true",
 					"llm-d.ai/model":            "ms-sim-llm-d-modelservice",
 					"llm-d.ai/model-pool":       poolName,
 				},

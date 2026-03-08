@@ -1113,7 +1113,7 @@ jobs:
           for ns in "$LLMD_NAMESPACE" "$LLMD_NAMESPACE_B"; do
             if kubectl get namespace "$ns" &>/dev/null; then
               echo "=== Scaling down decode deployments in $ns ==="
-              kubectl scale deployment -n "$ns" -l llm-d.ai/inferenceServing=true --replicas=0 || true
+              kubectl scale deployment -n "$ns" -l llm-d.ai/inference-serving=true --replicas=0 || true
               # Also try by name pattern in case labels are missing
               kubectl get deployment -n "$ns" -o name 2>/dev/null | grep decode | while read -r deploy; do
                 echo "  Scaling down: $deploy"

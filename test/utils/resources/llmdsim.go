@@ -24,7 +24,7 @@ func CreateLlmdSimDeployment(namespace, deployName, modelName, appLabel, port st
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":                       appLabel,
-					"llm-d.ai/inferenceServing": "true",
+					"llm-d.ai/inference-serving": "true",
 					"llm-d.ai/model":            "ms-sim-llm-d-modelservice",
 				},
 			},
@@ -32,7 +32,7 @@ func CreateLlmdSimDeployment(namespace, deployName, modelName, appLabel, port st
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						"app":                       appLabel,
-						"llm-d.ai/inferenceServing": "true",
+						"llm-d.ai/inference-serving": "true",
 						"llm-d.ai/model":            "ms-sim-llm-d-modelservice",
 					},
 				},
@@ -162,7 +162,7 @@ func CreateLlmdSimDeploymentWithGPU(namespace, deployName, modelName, appLabel, 
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":                       appLabel,
-					"llm-d.ai/inferenceServing": "true",
+					"llm-d.ai/inference-serving": "true",
 					"llm-d.ai/model":            "ms-sim-llm-d-modelservice",
 				},
 			},
@@ -170,7 +170,7 @@ func CreateLlmdSimDeploymentWithGPU(namespace, deployName, modelName, appLabel, 
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						"app":                       appLabel,
-						"llm-d.ai/inferenceServing": "true",
+						"llm-d.ai/inference-serving": "true",
 						"llm-d.ai/model":            "ms-sim-llm-d-modelservice",
 					},
 				},
@@ -252,13 +252,13 @@ func CreateLlmdSimService(namespace, serviceName, appLabel string, nodePort, por
 			Namespace: namespace,
 			Labels: map[string]string{
 				"app":                       appLabel,
-				"llm-d.ai/inferenceServing": "true",
+				"llm-d.ai/inference-serving": "true",
 			},
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
 				"app":                       appLabel,
-				"llm-d.ai/inferenceServing": "true",
+				"llm-d.ai/inference-serving": "true",
 			},
 			Ports: []corev1.ServicePort{
 				{
