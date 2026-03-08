@@ -43,6 +43,18 @@ VALUES_FILE=${VALUES_FILE:-"$WVA_PROJECT/charts/workload-variant-autoscaler/valu
 # Controller instance identifier for multi-controller isolation (optional)
 # When set, adds controller_instance label to metrics and HPA selectors
 CONTROLLER_INSTANCE=${CONTROLLER_INSTANCE:-""}
+# InferencePool API group
+# inference.networking.k8s.io for v1, should be new default
+# inference.networking.x-k8s.io for v1alpha2
+POOL_GROUP=${POOL_GROUP:-"inference.networking.k8s.io"}
+if [ "$POOL_GROUP" = "inference.networking.k8s.io" ]; then
+    POOL_VERSION="v1"
+elif [ "$POOL_GROUP" = "inference.networking.x-k8s.io" ]; then
+    POOL_VERSION="v1alpha2"
+else
+    log_error "Unknown POOL_GROUP: $POOL_GROUP (expected inference.networking.k8s.io or inference.networking.x-k8s.io)"
+    exit 1
+fi
 
 # llm-d Configuration
 LLM_D_OWNER=${LLM_D_OWNER:-"llm-d"}
@@ -581,8 +593,27 @@ deploy_second_model_infrastructure() {
 
     # Create second InferencePool with different selector
     log_info "Creating second InferencePool: $POOL_NAME_2"
-    cat <<EOF | kubectl apply -n $LLMD_NS -f -
-apiVersion: inference.networking.x-k8s.io/v1alpha2
+    if [ "$POOL_VERSION" = "v1" ]; then
+        cat <<EOF | kubectl apply -n $LLMD_NS -f -
+apiVersion: ${POOL_GROUP}/${POOL_VERSION}
+kind: InferencePool
+metadata:
+  name: $POOL_NAME_2
+spec:
+  selector:
+    matchLabels:
+      llm-d.ai/model-pool: "$MODEL_LABEL_2"
+      llm-d.ai/inference-serving: "true"
+  targetPorts:
+  - number: 8000
+  endpointPickerRef:
+    name: ${POOL_NAME_2}-epp
+    port:
+      number: 9002
+EOF
+    else
+        cat <<EOF | kubectl apply -n $LLMD_NS -f -
+apiVersion: ${POOL_GROUP}/${POOL_VERSION}
 kind: InferencePool
 metadata:
   name: $POOL_NAME_2
@@ -590,9 +621,11 @@ spec:
   targetPortNumber: 8000
   selector:
     llm-d.ai/model-pool: "$MODEL_LABEL_2"
+    llm-d.ai/inference-serving: "true"
   extensionRef:
     name: ${POOL_NAME_2}-epp
 EOF
+    fi
 
     # Create EPP deployment for second pool
     log_info "Creating EPP deployment for second pool"
@@ -676,12 +709,14 @@ spec:
     matchLabels:
       app: ${MS_NAME_2}-decode
       llm-d.ai/model-pool: "$MODEL_LABEL_2"
+      llm-d.ai/inference-serving: "true"
   template:
     metadata:
       labels:
         app: ${MS_NAME_2}-decode
         llm-d.ai/model-pool: "$MODEL_LABEL_2"
         llm-d.ai/model: "${MODEL_ID_2_SANITIZED}"
+        llm-d.ai/inference-serving: "true"
     spec:
       containers:
       - name: vllm
@@ -733,7 +768,7 @@ spec:
 EOF
 
     # Create InferenceModel for second model (maps model name to pool)
-    # Note: InferenceModel CRD may not be available in all environments
+    # TODO: InferenceModel only exists in inference.networking.x-k8s.io/v1alpha2, should use InfereceModelRewrite instead
     if kubectl get crd inferencemodels.inference.networking.x-k8s.io &>/dev/null; then
         log_info "Creating InferenceModel for second model"
         cat <<EOF | kubectl apply -n $LLMD_NS -f -
@@ -802,7 +837,11 @@ deploy_llm_d_infrastructure() {
 
     if [ ! -d "$LLM_D_PROJECT" ]; then
         log_info "Cloning $LLM_D_PROJECT repository (release: $LLM_D_RELEASE)"
-        git clone -b $LLM_D_RELEASE -- https://github.com/$LLM_D_OWNER/$LLM_D_PROJECT.git $LLM_D_PROJECT &> /dev/null
+        if ! git clone -b "$LLM_D_RELEASE" -- https://github.com/$LLM_D_OWNER/$LLM_D_PROJECT.git "$LLM_D_PROJECT" 2>&1 | grep -v "Cloning into"; then
+            log_error "Failed to clone $LLM_D_PROJECT repository (release: $LLM_D_RELEASE)"
+            return 1
+        fi
+        log_success "Successfully cloned $LLM_D_PROJECT repository (release: $LLM_D_RELEASE)"
     fi
 
     # Check for HF_TOKEN (use dummy for emulated deployments)
@@ -1036,6 +1075,7 @@ deploy_llm_d_infrastructure() {
 
     # Deploy InferenceObjective for GIE queuing when flow control is enabled (scale-from-zero / e2e).
     # Enables gateway-level queuing so inference_extension_flow_control_queue_size is populated.
+    # Note: InferenceObjective only exists in inference.networking.x-k8s.io v1alpha2
     if [ "$ENABLE_SCALE_TO_ZERO" == "true" ] || [ "$E2E_TESTS_ENABLED" == "true" ]; then
         if kubectl get crd inferenceobjectives.inference.networking.x-k8s.io &>/dev/null; then
             local infobj_file="${WVA_PROJECT}/deploy/inference-objective-e2e.yaml"
