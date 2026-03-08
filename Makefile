@@ -25,6 +25,7 @@ SCALE_TO_ZERO_ENABLED       ?= false
 SCALER_BACKEND              ?= prometheus-adapter  # prometheus-adapter (HPA) or keda (ScaledObject)
 E2E_MONITORING_NAMESPACE    ?= workload-variant-autoscaler-monitoring
 E2E_EMULATED_LLMD_NAMESPACE ?= llm-d-sim
+LLM_D_INFERENCE_SIM_IMG_TAG ?= v0.7.1  # ghcr.io/llm-d/llm-d-inference-sim image tag for E2E tests which does not follow llm-d release version
 
 # Flags for deploy/install.sh installation script
 CREATE_CLUSTER ?= false
@@ -195,6 +196,7 @@ deploy-e2e-infra: ## Deploy e2e test infrastructure (infra-only: WVA + llm-d, no
 		WVA_IMAGE_REPO=$$IMAGE_REPO \
 		WVA_IMAGE_TAG=$$IMAGE_TAG \
 		WVA_IMAGE_PULL_POLICY=IfNotPresent \
+		LLM_D_INFERENCE_SIM_IMG_TAG=$(LLM_D_INFERENCE_SIM_IMG_TAG) \
 		CONTAINER_TOOL=$(CONTAINER_TOOL) \
 		./deploy/install.sh; \
 	else \
@@ -206,6 +208,7 @@ deploy-e2e-infra: ## Deploy e2e test infrastructure (infra-only: WVA + llm-d, no
 		SCALER_BACKEND=$(SCALER_BACKEND) \
 		INSTALL_GATEWAY_CTRLPLANE=true \
 		NAMESPACE_SCOPED=false \
+		LLM_D_INFERENCE_SIM_IMG_TAG=$(LLM_D_INFERENCE_SIM_IMG_TAG) \
 		CONTAINER_TOOL=$(CONTAINER_TOOL) \
 		./deploy/install.sh; \
 	fi
