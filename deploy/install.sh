@@ -1109,6 +1109,11 @@ deploy_llm_d_infrastructure() {
             if helm upgrade "$WVA_RELEASE_NAME" ${WVA_PROJECT}/charts/workload-variant-autoscaler \
                 -n $WVA_NS --reuse-values --set wva.poolGroup=$DETECTED_POOL_GROUP --wait --timeout=60s; then
                 log_success "WVA upgraded with wva.poolGroup=$DETECTED_POOL_GROUP"
+                # Restart WVA controller to register InferencePool watcher after CRD v1 are installed.
+                log_info "Restarting WVA controller to register InferencePool watcher (CRDs now available)"
+                kubectl rollout restart deployment -n $WVA_NS -l app.kubernetes.io/name=workload-variant-autoscaler
+                kubectl rollout status deployment -n $WVA_NS -l app.kubernetes.io/name=workload-variant-autoscaler --timeout=60s
+                log_success "WVA controller restarted successfully"
             else
                 log_warning "WVA upgrade with poolGroup failed - scale-from-zero may not see the InferencePool"
             fi
