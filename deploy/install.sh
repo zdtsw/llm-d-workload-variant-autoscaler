@@ -1068,6 +1068,14 @@ deploy_llm_d_infrastructure() {
                     }
                 }
             ]'
+            # Wait for EPP rollout to complete to ensure flowcontrol is enabled before tests run.
+            # Without this, tests may start while old EPP pod (without flowcontrol) is still serving
+            log_info "Waiting for EPP rollout to complete (flowcontrol enabled)..."
+            if kubectl rollout status deployment "$LLM_D_EPP_NAME" -n "$LLMD_NS" --timeout=120s; then
+                log_success "EPP rollout complete with flowcontrol enabled"
+            else
+                log_warning "EPP rollout did not complete in time - scale-from-zero test may fail"
+            fi
         else
             log_warning "Skipping inference-scheduler patch: Deployment $LLM_D_EPP_NAME not found in $LLMD_NS"
         fi

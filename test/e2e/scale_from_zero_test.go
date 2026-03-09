@@ -59,7 +59,7 @@ var _ = Describe("Scale-From-Zero Feature", Label("smoke", "full"), Ordered, fun
 			g.Expect(err).NotTo(HaveOccurred(), "EPP service should exist")
 		}, 2*time.Minute, 5*time.Second).Should(Succeed(), "EPP service should exist")
 
-		// Wait for EPP pods to be ready
+		// Wait for EPP pods to be ready with flowcontrol enabled
 		Eventually(func(g Gomega) {
 			podList, err := k8sClient.CoreV1().Pods(cfg.LLMDNamespace).List(ctx, metav1.ListOptions{
 				LabelSelector: fmt.Sprintf("inferencepool=%s", eppServiceName),
@@ -67,21 +67,38 @@ var _ = Describe("Scale-From-Zero Feature", Label("smoke", "full"), Ordered, fun
 			g.Expect(err).NotTo(HaveOccurred(), "Should be able to list pods")
 			g.Expect(len(podList.Items)).To(BeNumerically(">", 0), "EPP pods should exist")
 
-			// Check that at least one pod is ready
-			hasReadyPod := false
+			// Check that at least one pod is ready with flowcontrol enabled
+			hasReadyPodWithFlowControl := false
 			for _, pod := range podList.Items {
+				isReady := false
 				for _, condition := range pod.Status.Conditions {
 					if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
-						hasReadyPod = true
+						isReady = true
 						break
 					}
 				}
-				if hasReadyPod {
+				if !isReady {
+					continue
+				}
+				// double ehck flowcontrol is enabled as env var
+				for _, container := range pod.Spec.Containers {
+					for _, env := range container.Env {
+						if env.Name == "ENABLE_EXPERIMENTAL_FLOW_CONTROL_LAYER" && env.Value == "true" {
+							hasReadyPodWithFlowControl = true
+							break
+						}
+					}
+					if hasReadyPodWithFlowControl {
+						break
+					}
+				}
+				if hasReadyPodWithFlowControl {
 					break
 				}
 			}
-			g.Expect(hasReadyPod).To(BeTrue(), "At least one EPP pod should be ready")
-		}, 2*time.Minute, 5*time.Second).Should(Succeed(), "EPP pods should be ready")
+			g.Expect(hasReadyPodWithFlowControl).To(BeTrue(),
+				"At least one ready EPP pod should have ENABLE_EXPERIMENTAL_FLOW_CONTROL_LAYER=true")
+		}, 3*time.Minute, 5*time.Second).Should(Succeed(), "EPP pods should be ready with flowcontrol enabled")
 
 		// Additional delay to ensure the datastore is fully populated after EPP is ready
 		time.Sleep(5 * time.Second)
