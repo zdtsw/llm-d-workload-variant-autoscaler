@@ -86,12 +86,20 @@ func buildModelServiceDeployment(namespace, name, poolName, modelID string, useS
 		image = "ghcr.io/llm-d/llm-d-cuda-dev:latest"
 	}
 	args := buildModelServerArgs(modelID, useSimulator, maxNumSeqs)
+	// Labels must include all labels from the infrastructure InferencePool's selector.
+	// For kind-emulator (gaie-sim), the selector uses:
+	// - llm-d.ai/inference-serving: "true"
+	// - llm-d.ai/guide: "simulated-accelerators"
+	// - llm-d.ai/accelerator-variant: "cpu"
+	// - llm-d.ai/model: "random"
 	labels := map[string]string{
-		"app":                         appLabel,
-		"llm-d.ai/inference-serving": "true",
-		"llm-d.ai/model":              "ms-sim-llm-d-modelservice",
-		"llm-d.ai/model-pool":         poolName,
-		"test-resource":               "true",
+		"app":                          appLabel,
+		"llm-d.ai/inference-serving":   "true",
+		"llm-d.ai/guide":               poolName,
+		"llm-d.ai/accelerator-variant": "cpu",
+		"llm-d.ai/model":               "random",
+		"llm-d.ai/model-pool":          poolName,
+		"test-resource":                "true",
 	}
 
 	envVars := []corev1.EnvVar{
@@ -135,10 +143,11 @@ func buildModelServiceDeployment(namespace, name, poolName, modelID string, useS
 			Replicas: ptr.To(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app":                       appLabel,
-					"llm-d.ai/inference-serving": "true",
-					"llm-d.ai/model":            "ms-sim-llm-d-modelservice",
-					"llm-d.ai/model-pool":       poolName,
+					"app":                          appLabel,
+					"llm-d.ai/inference-serving":   "true",
+					"llm-d.ai/guide":               poolName,
+					"llm-d.ai/accelerator-variant": "cpu",
+					"llm-d.ai/model":               "random", // to match simulator model
 				},
 			},
 			Template: corev1.PodTemplateSpec{

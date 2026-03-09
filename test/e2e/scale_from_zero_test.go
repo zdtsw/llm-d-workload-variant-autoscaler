@@ -28,7 +28,9 @@ import (
 // Uses KEDA ScaledObject when standard HPA rejects minReplicas=0 (e.g. OpenShift).
 var _ = Describe("Scale-From-Zero Feature", Label("smoke", "full"), Ordered, func() {
 	var (
-		poolName         = "scale-from-zero-pool"
+		// poolName must match the infrastructure InferencePool's selector label (llm-d.ai/guide).
+		// E2E tests only run on kind-emulator which uses "simulated-accelerators" (WELL_LIT_PATH_NAME).
+		poolName         = "simulated-accelerators"
 		modelServiceName = "scale-from-zero-ms"
 		vaName           = "scale-from-zero-va"
 		hpaName          = "scale-from-zero-hpa"

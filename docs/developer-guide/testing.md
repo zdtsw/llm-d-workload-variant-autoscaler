@@ -8,7 +8,7 @@ WVA has a multi-layered testing strategy:
 
 1. **Unit Tests** - Fast, isolated tests for individual packages and functions
 2. **Integration Tests** - Tests for component interactions within the controller
-3. **E2E Tests** - Environment-agnostic end-to-end tests (Kind emulated or OpenShift), with smoke and full tiers
+3. **E2E Tests** - End-to-end tests on Kind clusters with emulated GPUs, with smoke and full tiers
 
 ## Unit Tests
 
@@ -134,10 +134,12 @@ var _ = AfterSuite(func() {
 
 ## End-to-End Tests
 
-WVA provides a **single consolidated E2E suite** that runs on multiple environments (Kind with emulated GPUs, or OpenShift/kubernetes with real infrastructure). Tests are environment-agnostic and parameterized via environment variables; they create VA, HPA, and model services dynamically as part of the test workflow.
+WVA provides a **single consolidated E2E suite** that runs on Kind clusters with emulated GPUs. Tests create VA, HPA, and model services dynamically as part of the test workflow.
+
+> **Note**: E2E tests are only supported on Kind clusters (`ENVIRONMENT=kind-emulator`). The test fixtures and labels are configured specifically for the Kind emulator deployment which uses the `simulated-accelerators` guide from llm-d. Running E2E tests on other environments (OpenShift, generic Kubernetes) is not supported for now.
 
 - **Location**: `test/e2e/`
-- **Environments**: Kind (emulated), OpenShift, or generic Kubernetes
+- **Supported Environment**: Kind (emulated GPUs only)
 - **Tiers**: Smoke (~5–10 min) for PRs; full suite (~15–25 min) for comprehensive validation
 
 ### Infra-Only Setup (Required Before Running Tests)

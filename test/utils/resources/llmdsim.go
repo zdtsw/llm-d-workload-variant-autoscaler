@@ -23,17 +23,17 @@ func CreateLlmdSimDeployment(namespace, deployName, modelName, appLabel, port st
 			Replicas: ptr.To(replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app":                       appLabel,
+					"app":                        appLabel,
 					"llm-d.ai/inference-serving": "true",
-					"llm-d.ai/model":            "ms-sim-llm-d-modelservice",
+					"llm-d.ai/model":             "ms-sim-llm-d-modelservice",
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app":                       appLabel,
+						"app":                        appLabel,
 						"llm-d.ai/inference-serving": "true",
-						"llm-d.ai/model":            "ms-sim-llm-d-modelservice",
+						"llm-d.ai/model":             "ms-sim-llm-d-modelservice",
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -161,17 +161,17 @@ func CreateLlmdSimDeploymentWithGPU(namespace, deployName, modelName, appLabel, 
 			Replicas: ptr.To(replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app":                       appLabel,
+					"app":                        appLabel,
 					"llm-d.ai/inference-serving": "true",
-					"llm-d.ai/model":            "ms-sim-llm-d-modelservice",
+					"llm-d.ai/model":             "ms-sim-llm-d-modelservice",
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app":                       appLabel,
+						"app":                        appLabel,
 						"llm-d.ai/inference-serving": "true",
-						"llm-d.ai/model":            "ms-sim-llm-d-modelservice",
+						"llm-d.ai/model":             "ms-sim-llm-d-modelservice",
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -251,13 +251,13 @@ func CreateLlmdSimService(namespace, serviceName, appLabel string, nodePort, por
 			Name:      serviceName,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app":                       appLabel,
+				"app":                        appLabel,
 				"llm-d.ai/inference-serving": "true",
 			},
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
-				"app":                       appLabel,
+				"app":                        appLabel,
 				"llm-d.ai/inference-serving": "true",
 			},
 			Ports: []corev1.ServicePort{
