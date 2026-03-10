@@ -253,10 +253,15 @@ func (e *Engine) processInactiveVariant(ctx context.Context, va wvav1alpha1.Vari
 	// Check for pending requests using EPP flowcontrol queue size metrics
 	result := results["all_metrics"]
 	pendingRequestExist := false
+	var queueMetricFound bool
+	var queueMetricModels []string
 	for _, value := range result.Values {
 		metricName := value.Labels["__name__"]
 		if metricName == targetEPPMetricName && value.Value > 0 {
-			if value.Labels[targetEPPMetricLabel] == va.Spec.ModelID {
+			queueMetricFound = true
+			modelLabel := value.Labels[targetEPPMetricLabel]
+			queueMetricModels = append(queueMetricModels, modelLabel)
+			if modelLabel == va.Spec.ModelID {
 				logger.Info(
 					"Target workload has pending requests, scaling up from zero", "metricName", metricName,
 					"metric", value.Labels, "value", value.Value)
@@ -267,6 +272,13 @@ func (e *Engine) processInactiveVariant(ctx context.Context, va wvav1alpha1.Vari
 	}
 
 	if !pendingRequestExist {
+		// Log INFO only when queue exists but model doesn't match
+		if queueMetricFound {
+			logger.Info("Scale-from-zero: queue has pending requests but model not matched",
+				"va", va.Name,
+				"vaModelID", va.Spec.ModelID,
+				"queueModels", queueMetricModels)
+		}
 		// Scale-from-zero loop runs every 100ms; log at DEBUG to avoid flooding (10/sec per inactive VA).
 		logger.V(logging.DEBUG).Info("Scale-from-zero: skipping VA, no pending requests in flow control queue",
 			"va", va.Name,

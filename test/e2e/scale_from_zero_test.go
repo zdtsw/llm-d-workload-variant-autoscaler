@@ -326,8 +326,9 @@ var _ = Describe("Scale-From-Zero Feature", Label("smoke", "full"), Ordered, fun
 			GinkgoWriter.Println("Job pod is running and sending requests")
 
 			// Give requests time to queue up in EPP before checking for scale-up
+			// Increased from 10s to 20s for CI environments where gateway may need more time
 			By("Waiting for requests to queue up in EPP flow control queue")
-			time.Sleep(10 * time.Second)
+			time.Sleep(20 * time.Second)
 
 			By("Monitoring VariantAutoscaling for scale-from-zero decision")
 			Eventually(func(g Gomega) {

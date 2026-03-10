@@ -1105,7 +1105,7 @@ deploy_llm_d_infrastructure() {
     fi
 
     log_info "Waiting for llm-d components to initialize..."
-    kubectl wait --for=condition=Available deployment --all -n $LLMD_NS --timeout=60s || \
+    kubectl wait --for=condition=Available deployment --all -n $LLMD_NS --timeout=120s || \
         log_warning "llm-d components are not ready yet - check 'kubectl get pods -n $LLMD_NS'"
 
     # Align WVA with the InferencePool API group in use (scale-from-zero requires WVA to watch the same group).
