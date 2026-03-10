@@ -21,7 +21,6 @@ spec:
     matchLabels:
       control-plane: controller-manager
       app.kubernetes.io/name: workload-variant-autoscaler
-  # k8s defaults to 1 replica, omit config here, but keep replica 2 in chart
   template:
     metadata:
       annotations:
