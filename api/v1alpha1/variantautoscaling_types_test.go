@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -27,7 +27,7 @@ func makeValidVA() *VariantAutoscaling {
 			},
 		},
 		Spec: VariantAutoscalingSpec{
-			ScaleTargetRef: autoscalingv1.CrossVersionObjectReference{
+			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 				Kind: "Deployment",
 				Name: "va-sample-deployment",
 			},
@@ -140,7 +140,7 @@ func TestStatusOmitEmpty(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: VariantAutoscalingSpec{
-			ScaleTargetRef: autoscalingv1.CrossVersionObjectReference{
+			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 				Kind: "Deployment",
 				Name: "va-empty-status-deployment",
 			},

@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/common/model"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -145,7 +145,7 @@ data:
 						},
 					},
 					Spec: llmdVariantAutoscalingV1alpha1.VariantAutoscalingSpec{
-						ScaleTargetRef: autoscalingv1.CrossVersionObjectReference{
+						ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 							Kind: "Deployment",
 							Name: name,
 						},
@@ -381,7 +381,7 @@ data:
 						},
 					},
 					Spec: llmdVariantAutoscalingV1alpha1.VariantAutoscalingSpec{
-						ScaleTargetRef: autoscalingv1.CrossVersionObjectReference{
+						ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 							Kind: "Deployment",
 							Name: name,
 						},

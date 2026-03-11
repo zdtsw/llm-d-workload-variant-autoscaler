@@ -83,7 +83,6 @@ spec:
                 - kind
                 - name
                 type: object
-                x-kubernetes-map-type: atomic
               variantCost:
                 default: "10.0"
                 description: VariantCost specifies the cost per replica for this variant

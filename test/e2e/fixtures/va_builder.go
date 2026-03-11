@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -106,13 +106,15 @@ func buildVariantAutoscaling(namespace, name, deploymentName, modelID, accelerat
 			Labels:    labels,
 		},
 		Spec: variantautoscalingv1alpha1.VariantAutoscalingSpec{
-			ScaleTargetRef: autoscalingv1.CrossVersionObjectReference{
+			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 				APIVersion: "apps/v1",
 				Kind:       "Deployment",
 				Name:       deploymentName,
 			},
-			ModelID:     modelID,
-			VariantCost: fmt.Sprintf("%.1f", cost),
+			ModelID: modelID,
+			VariantAutoscalingConfigSpec: variantautoscalingv1alpha1.VariantAutoscalingConfigSpec{
+				VariantCost: fmt.Sprintf("%.1f", cost),
+			},
 		},
 	}
 }
