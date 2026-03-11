@@ -35,7 +35,7 @@ func DumpControllerLogs(ctx context.Context, k8sClient *kubernetes.Clientset, co
 	for _, pod := range pods.Items {
 		_, _ = fmt.Fprintf(w, "\n--- Logs from pod %s ---\n", pod.Name)
 		logs, err := k8sClient.CoreV1().Pods(controllerNamespace).GetLogs(pod.Name, &corev1.PodLogOptions{
-			TailLines: ptr.To(int64(200)),
+			TailLines: ptr.To(int64(2000)),
 		}).DoRaw(ctx)
 		if err != nil {
 			_, _ = fmt.Fprintf(w, "Failed to get logs: %v\n", err)

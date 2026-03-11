@@ -345,11 +345,60 @@ var _ = Describe("Scale-From-Zero Feature", Label("smoke", "full"), Ordered, fun
 				optCond := variantautoscalingv1alpha1.GetCondition(va, variantautoscalingv1alpha1.TypeOptimizationReady)
 
 				GinkgoWriter.Printf("VA DesiredOptimizedAlloc.NumReplicas: %d (waiting for > 0)\n", optimized)
+				GinkgoWriter.Printf("  VA.Spec.ModelID: %s\n", va.Spec.ModelID)
+				GinkgoWriter.Printf("  VA.Spec.ScaleTargetRef: %s\n", va.Spec.ScaleTargetRef.Name)
+				GinkgoWriter.Printf("  VA.Labels: %v\n", va.Labels)
 				if metricsCond != nil {
 					GinkgoWriter.Printf("  MetricsAvailable: %s/%s (%s)\n", metricsCond.Status, metricsCond.Reason, metricsCond.Message)
+				} else {
+					GinkgoWriter.Printf("  MetricsAvailable: <nil>\n")
 				}
 				if optCond != nil {
 					GinkgoWriter.Printf("  OptimizationReady: %s/%s (%s)\n", optCond.Status, optCond.Reason, optCond.Message)
+				} else {
+					GinkgoWriter.Printf("  OptimizationReady: <nil>\n")
+				}
+
+				// Check deployment status
+				deploy, err := k8sClient.AppsV1().Deployments(cfg.LLMDNamespace).Get(ctx, modelServiceName+"-decode", metav1.GetOptions{})
+				if err == nil {
+					GinkgoWriter.Printf("  Deployment: desired=%d, current=%d, ready=%d\n",
+						*deploy.Spec.Replicas, deploy.Status.Replicas, deploy.Status.ReadyReplicas)
+				} else {
+					GinkgoWriter.Printf("  Deployment: error getting deployment: %v\n", err)
+				}
+
+				// Check controller pods
+				controllerPods, err := k8sClient.CoreV1().Pods(cfg.WVANamespace).List(ctx, metav1.ListOptions{
+					LabelSelector: "app.kubernetes.io/name=workload-variant-autoscaler",
+				})
+				if err == nil {
+					readyCount := 0
+					for _, pod := range controllerPods.Items {
+						if isPodReady(&pod) {
+							readyCount++
+						}
+					}
+					GinkgoWriter.Printf("  Controller pods: %d total, %d ready\n", len(controllerPods.Items), readyCount)
+				}
+
+				// Check EPP pods with flow control
+				eppPods, err := k8sClient.CoreV1().Pods(cfg.LLMDNamespace).List(ctx, metav1.ListOptions{
+					LabelSelector: "app.kubernetes.io/component=inference-scheduler",
+				})
+				if err == nil {
+					flowControlCount := 0
+					for _, pod := range eppPods.Items {
+						for _, container := range pod.Spec.Containers {
+							for _, env := range container.Env {
+								if env.Name == "ENABLE_EXPERIMENTAL_FLOW_CONTROL_LAYER" && env.Value == "true" {
+									flowControlCount++
+									break
+								}
+							}
+						}
+					}
+					GinkgoWriter.Printf("  EPP pods: %d total, %d with flowControl enabled\n", len(eppPods.Items), flowControlCount)
 				}
 
 				// Scale-from-zero engine should detect pending requests and recommend scaling up
@@ -495,4 +544,14 @@ fi
 			},
 		},
 	}
+}
+
+// isPodReady checks if a pod is in Ready condition
+func isPodReady(pod *corev1.Pod) bool {
+	for _, condition := range pod.Status.Conditions {
+		if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
