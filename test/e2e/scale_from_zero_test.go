@@ -1426,4 +1426,3 @@ var _ = Describe("Scale-From-Zero Feature with LeaderWorkerSet (single-node)", S
 		})
 	})
 })
-
