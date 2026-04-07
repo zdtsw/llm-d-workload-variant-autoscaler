@@ -90,7 +90,6 @@ SLO_TPOT=${SLO_TPOT:-10}  # Target time-per-output-token SLO (in ms)
 SLO_TTFT=${SLO_TTFT:-1000}  # Target time-to-first-token SLO (in ms)
 
 # Prometheus Configuration
-PROM_CA_CERT_PATH=${PROM_CA_CERT_PATH:-"/tmp/prometheus-ca.crt"}
 PROMETHEUS_SECRET_NAME=${PROMETHEUS_SECRET_NAME:-"prometheus-web-tls"}
 
 # Flags for deployment steps

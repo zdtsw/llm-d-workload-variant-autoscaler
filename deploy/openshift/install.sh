@@ -127,8 +127,10 @@ deploy_prometheus_stack() {
 
 #### REQUIRED FUNCTION used by deploy/install.sh ####
 deploy_wva_prerequisites() {
-    log_info "Deploying Workload-Variant-Autoscaler..."
-    extract_openshift_prometheus_ca
+    log_info "Deploying Workload-Variant-Autoscaler prerequisites..."
+
+    log_info "OpenShift automatically provides service CA certificate in projected volume"
+    log_info "Certificate path: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
 
     log_info "Installing LeaderWorkerSet version $LWS_CHART_VERSION into lws-system namespace"
     helm upgrade -i lws oci://registry.k8s.io/lws/charts/lws \

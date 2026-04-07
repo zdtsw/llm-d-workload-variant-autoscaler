@@ -19,6 +19,8 @@ PROMETHEUS_PORT="9090"
 PROMETHEUS_URL=${PROMETHEUS_URL:-"$PROMETHEUS_BASE_URL:$PROMETHEUS_PORT"}
 PROMETHEUS_SECRET_NAME=${PROMETHEUS_SECRET_NAME:-"prometheus-web-tls"}
 # Prometheus TLS - mount existing secret directly (no extraction needed)
+PROM_TLS_SECRET_NAME="prometheus-web-tls"
+PROM_TLS_KEY="tls.crt"
 PROM_TLS_CA_CERT_PATH="/etc/ssl/certs/prometheus-ca.crt" # need a different path than OCP default value
 DEPLOY_PROMETHEUS=${DEPLOY_PROMETHEUS:-"true"}
 SKIP_TLS_VERIFY=${SKIP_TLS_VERIFY:-"true"}

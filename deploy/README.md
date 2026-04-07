@@ -288,15 +288,16 @@ Deploy with a specific llm-d release version and use Podman instead of Docker:
 
 ```bash
 export HF_TOKEN="hf_xxxxx"
-export LLM_D_EPP_RELEASE="v0.7.1"      # Pin to specific llm-d-inference-scheduler version
-export LLM_D_SIM_RELEASE="v0.8.2"      # Pin to specific llm-d-inference-sim version
-export CONTAINER_TOOL=podman       # Use Podman instead of Docker
+export LLM_D_RELEASE="v0.6.0"          # Pin llm-d repo clone version
+export LLM_D_EPP_RELEASE="v0.7.1"      # Pin llm-d-inference-scheduler image tag
+export LLM_D_SIM_RELEASE="v0.8.2"      # Pin llm-d-inference-sim image tag
+export CONTAINER_TOOL=podman            # Use Podman instead of Docker
 make deploy-wva-emulated-on-kind
 
-# The variable automatically sets:
+# These variables independently control:
+# - LLM_D_RELEASE: which branch/tag of the llm-d repo to clone
 # - LLM_D_INFERENCE_SCHEDULER_IMG=ghcr.io/llm-d/llm-d-inference-scheduler:v0.7.1
 # - LLM_D_INFERENCE_SIM_IMG=ghcr.io/llm-d/llm-d-inference-sim:v0.8.2
-# - llm-d repository clone version
 ```
 
 ### Method 2: Helm Chart

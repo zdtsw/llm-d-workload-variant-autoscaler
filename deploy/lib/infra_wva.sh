@@ -71,7 +71,6 @@ deploy_wva_controller() {
     helm upgrade -i "$WVA_RELEASE_NAME" ${WVA_PROJECT}/charts/workload-variant-autoscaler \
         -n "$WVA_NS" \
         --values $VALUES_FILE \
-        --set-file wva.prometheus.caCert="$PROM_CA_CERT_PATH" \
         --set wva.image.repository="$WVA_IMAGE_REPO" \
         --set wva.image.tag="$WVA_IMAGE_TAG" \
         --set wva.imagePullPolicy="$WVA_IMAGE_PULL_POLICY" \
@@ -89,6 +88,9 @@ deploy_wva_controller() {
         --set llmd.namespace="$LLMD_NS" \
         --set wva.prometheus.baseURL="$PROMETHEUS_URL" \
         --set wva.prometheus.monitoringNamespace="$MONITORING_NAMESPACE" \
+        --set wva.prometheus.tls.caCertPath="$PROM_TLS_CA_CERT_PATH" \
+        ${PROM_TLS_SECRET_NAME:+--set wva.prometheus.tls.existingSecret=$PROM_TLS_SECRET_NAME} \
+        ${PROM_TLS_KEY:+--set wva.prometheus.tls.key=$PROM_TLS_KEY} \
         --set vllmService.enabled="$VLLM_SVC_ENABLED" \
         --set vllmService.port="$VLLM_SVC_PORT" \
         --set vllmService.targetPort="$VLLM_SVC_PORT" \
@@ -172,9 +174,12 @@ delete_namespaces_kube_like() {
 deploy_wva_prerequisites_kube_like() {
     log_info "Deploying Workload-Variant-Autoscaler prerequisites for Kubernetes..."
 
-    # Extract Prometheus CA certificate
-    log_info "Extracting Prometheus TLS certificate"
-    kubectl get secret "$PROMETHEUS_SECRET_NAME" -n "$MONITORING_NAMESPACE" -o jsonpath='{.data.tls\.crt}' | base64 -d > "$PROM_CA_CERT_PATH"
+    # Copy prometheus TLS Secret to WVA namespace for direct mounting (no extraction needed)
+    log_info "Copying $PROMETHEUS_SECRET_NAME Secret to WVA namespace..."
+    kubectl get secret "$PROMETHEUS_SECRET_NAME" -n "$MONITORING_NAMESPACE" -o yaml | \
+        sed "s/namespace: $MONITORING_NAMESPACE/namespace: $WVA_NS/" | \
+        kubectl apply -f - &> /dev/null
+    log_success "Secret copied to $WVA_NS namespace"
 
     local use_values_dev=false
     if [ "$SKIP_TLS_VERIFY" = "true" ]; then
@@ -201,64 +206,4 @@ deploy_wva_prerequisites_kube_like() {
         --wait --timeout 300s
 
     log_success "WVA prerequisites complete"
-}
-
-# OpenShift-specific CA extraction used by deploy/openshift/install.sh.
-extract_openshift_prometheus_ca() {
-    # Extract OpenShift Service CA certificate for Thanos verification
-    # Note: For OpenShift service certificates, we need the Service CA that signed the server cert,
-    # not the server certificate itself. The server cert is in thanos-querier-tls, but we need the CA.
-    log_info "Extracting OpenShift Service CA certificate for Thanos verification"
-
-    # Method 1: Extract Service CA from openshift-service-ca.crt ConfigMap (preferred)
-    # This is the actual CA certificate that signs OpenShift service certificates
-    if kubectl get configmap openshift-service-ca.crt -n "$PROMETHEUS_SECRET_NS" &> /dev/null; then
-        log_info "Extracting Service CA from openshift-service-ca.crt ConfigMap"
-        kubectl get configmap openshift-service-ca.crt -n "$PROMETHEUS_SECRET_NS" -o jsonpath='{.data.service-ca\.crt}' > "$PROM_CA_CERT_PATH" 2>/dev/null || true
-        if [ -s "$PROM_CA_CERT_PATH" ]; then
-            log_success "Extracted Service CA from openshift-service-ca.crt ConfigMap"
-        fi
-    fi
-
-    # Method 2: Extract Service CA from openshift-config namespace
-    if [ ! -s "$PROM_CA_CERT_PATH" ]; then
-        log_info "Trying to extract Service CA from openshift-config namespace"
-        kubectl get configmap openshift-service-ca -n openshift-config -o jsonpath='{.data.service-ca\.crt}' > "$PROM_CA_CERT_PATH" 2>/dev/null || true
-        if [ -s "$PROM_CA_CERT_PATH" ]; then
-            log_success "Extracted Service CA from openshift-config namespace"
-        fi
-    fi
-
-    # Method 3: Fallback to thanos-querier-tls secret (as per Helm README)
-    # Note: This extracts the server certificate, which may work if the cert chain includes the CA
-    # but it's not ideal - we should use the Service CA instead.
-    if [ ! -s "$PROM_CA_CERT_PATH" ]; then
-        log_warning "Service CA not found, falling back to server certificate from thanos-querier-tls"
-        log_warning "This may cause TLS verification issues - Service CA is preferred"
-        if kubectl get secret "$PROMETHEUS_SECRET_NAME" -n "$PROMETHEUS_SECRET_NS" &> /dev/null; then
-            log_info "Extracting certificate from thanos-querier-tls secret (as per Helm README)"
-            kubectl get secret "$PROMETHEUS_SECRET_NAME" -n "$PROMETHEUS_SECRET_NS" -o jsonpath='{.data.tls\.crt}' | base64 -d > "$PROM_CA_CERT_PATH"
-            if [ -s "$PROM_CA_CERT_PATH" ]; then
-                log_success "Extracted certificate from thanos-querier-tls secret"
-            fi
-        fi
-    fi
-
-    # Verify we have a valid certificate
-    if [ ! -s "$PROM_CA_CERT_PATH" ]; then
-        log_error "Failed to extract OpenShift Service CA certificate"
-        log_error "Tried: openshift-service-ca.crt ConfigMap, openshift-config ConfigMap, and thanos-querier-tls secret"
-        exit 1
-    fi
-
-    # Verify the certificate is valid PEM format
-    if ! openssl x509 -in "$PROM_CA_CERT_PATH" -text -noout &> /dev/null; then
-        log_warning "Certificate file may not be in valid PEM format, but continuing..."
-        log_warning "If TLS errors occur, verify the certificate format is correct"
-    else
-        # Log certificate details for debugging
-        local cert_subject
-        cert_subject=$(openssl x509 -in "$PROM_CA_CERT_PATH" -noout -subject 2>/dev/null | sed 's/subject=//' || echo "unknown")
-        log_info "Certificate subject: $cert_subject"
-    fi
 }

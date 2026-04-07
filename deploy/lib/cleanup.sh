@@ -94,8 +94,6 @@ undeploy_wva_controller() {
     helm uninstall "$WVA_RELEASE_NAME" -n "$WVA_NS" 2>/dev/null || \
         log_warning "Workload-Variant-Autoscaler not found or already uninstalled"
 
-    rm -f "$PROM_CA_CERT_PATH"
-
     log_success "WVA uninstalled"
 }
 

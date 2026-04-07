@@ -2,7 +2,7 @@
 #
 # Scaler backend deployment/runtime helpers for deploy/install.sh.
 # Requires vars: MONITORING_NAMESPACE, KEDA_NAMESPACE, KEDA_CHART_VERSION,
-# PROM_CA_CERT_PATH, PROMETHEUS_BASE_URL, PROMETHEUS_PORT, E2E_TESTS_ENABLED.
+# PROMETHEUS_BASE_URL, PROMETHEUS_PORT, E2E_TESTS_ENABLED.
 # Requires funcs: log_info/log_warning/log_success/log_error,
 # should_skip_helm_repo_update(), retry_until_success().
 #
@@ -159,22 +159,6 @@ deploy_prometheus_adapter() {
     else
         helm repo update
     fi
-
-    # Create prometheus-ca ConfigMap from the CA certificate
-    log_info "Creating prometheus-ca ConfigMap for Prometheus Adapter"
-    if [ ! -f "$PROM_CA_CERT_PATH" ] || [ ! -s "$PROM_CA_CERT_PATH" ]; then
-        log_error "CA certificate file not found or empty: $PROM_CA_CERT_PATH"
-        log_error "Please ensure deploy_wva_prerequisites() was called first"
-        exit 1
-    fi
-
-    # Create or update the prometheus-ca ConfigMap
-    kubectl create configmap "$PROMETHEUS_CA_CONFIGMAP_NAME" \
-        --from-file="ca.crt=$PROM_CA_CERT_PATH" \
-        -n "$MONITORING_NAMESPACE" \
-        --dry-run=client -o yaml | kubectl apply -f -
-
-    log_success "prometheus-ca ConfigMap created/updated"
 
     # Use existing values files from config/samples
     local values_file=""
